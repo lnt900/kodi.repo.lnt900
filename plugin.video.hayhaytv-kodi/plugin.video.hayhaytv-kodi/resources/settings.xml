@@ -1,0 +1,8 @@
+﻿<settings>
+	<setting id="username" default="" type="text" label="Email"/>
+	<setting id="password" default="" type="text" option="hidden" label="Password"/>
+	<setting id="npp" default="25" type="number" label="Số lượng phim trong 1 trang"/>
+	<setting label="Lấy thumbnail chất lượng cao" type="bool" id="hiresthumb" default="false"/>
+	<setting id="token" type="text" visible="false" default="none" label="Token"/>
+	<setting id="user_id" type="text" visible="false" default="none" label="UserID"/>
+</settings>
