@@ -101,19 +101,12 @@ class MyRequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
 		if self.path == '/':self.dummy(200,'VNIPTV Service')
 		else:
 			parsed_params = urlparse.urlparse(self.path)
-
 			if parsed_params.path == '/fpt':
 				reslink = getFPT(parsed_params.query)
-				self.send_response(301)
-				self.send_header('Content-type','text/html')
-				self.send_header('Location', reslink)
-				self.end_headers()
+				self.redirect(reslink)
 			elif parsed_params.path == '/htv':
 				reslink = getHTV(parsed_params.query)
-				self.send_response(301)
-				self.send_header('Content-type','text/html')
-				self.send_header('Location', reslink)
-				self.end_headers()
+				self.redirect(reslink)
 			elif parsed_params.path == '/xmio':
 				xmio_user = str(xbmcaddon.Addon().getSetting('xmiouser'))
 				xmio_pw = str(xbmcaddon.Addon().getSetting('xmiopw'))
@@ -124,7 +117,7 @@ class MyRequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
 				xvar = "http://125.212.227.230:7001/live/index?action=get_stream&channel_id=%s&device_Type=stb" % chid
 				index = geturl(xvar,cookies=xmiocookie)
 				if not "url" in index and not 'data' in index:
-					xmiologin(xmio_user,xmio_pw)
+					xmiocookie = xmiologin(xmio_user,xmio_pw)
 					index = geturl(xvar,cookies=xmiocookie)
 				if "url" in index and 'data' in index:
 					lnk = json.loads(index)['data']['url']
@@ -133,13 +126,10 @@ class MyRequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
 					if quality:reslink = re.sub('\$_p5.+/','/',lnk)
 					else:reslink = re.sub('\$_p4.+\$','$',lnk)
 				else: reslink = "blank.mp4"
-				
-				self.send_response(301)
-				self.send_header('Content-type','text/html')
-				self.send_header('Location', reslink)
-				self.end_headers()
+				self.redirect(reslink)
 			elif parsed_params.path == '/sctv':
 				sctv_user = str(xbmcaddon.Addon().getSetting('sctvuser'))
+				sctv_port = str(xbmcaddon.Addon().getSetting('sctv_port'))
 				global sctvhash
 				if not sctvhash:sctvhash = sctvlogin(sctv_user)
 				sv = 'mslive2'
@@ -149,18 +139,13 @@ class MyRequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
 					sv = clink[0]
 					channel = clink[1]
 				else:channel = parsed_params.query
-				link = 'http://112.197.2.135:1935/%s/%s/playlist.m3u8?us=%s' %(sv,channel,sctvhash)
-				index = geturl(link)
+				index = geturl('http://112.197.2.135:%s/%s/%s/playlist.m3u8?us=%s' %(sctv_port,sv,channel,sctvhash))
 				if not index or 'chunklist' not in index:
 					sctvhash = sctvlogin(sctv_user)
-					index = geturl(link)
-				if index and 'chunklist' in index:reslink = link
+					index = geturl('http://112.197.2.135:%s/%s/%s/playlist.m3u8?us=%s' %(sctv_port,sv,channel,sctvhash))
+				if index and 'chunklist' in index:reslink = 'http://112.197.2.135:%s/%s/%s/playlist.m3u8?us=%s' %(sctv_port,sv,channel,sctvhash)
 				else:reslink = 'blank.mp4'
-				
-				self.send_response(301)
-				self.send_header('Content-type','text/html')
-				self.send_header('Location', reslink)
-				self.end_headers()
+				self.redirect(reslink)
 			elif parsed_params.path == '/logoutxmio':
 				global xmiocookie
 				xmio_user = str(xbmcaddon.Addon().getSetting('xmiouser'))
@@ -169,13 +154,20 @@ class MyRequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
 				devid = str(xbmcaddon.Addon().getSetting('xmio_deviceid'))
 				index = geturl('http://125.212.227.230:7001/billing/account?device_id=%s&action=logout' %devid,cookies=xmiocookie)
 				self.dummy(200,'VNIPTV: Logged out Xmio')
-			else:self.dummy(200,'VNIPTV Service')
+			else:self.dummy(404,'VNIPTV 404: Not Found')
+	
 	def dummy(self,head,text):
 		self.send_response(int(head))
 		self.send_header('Content-type', 'text/html')
 		self.end_headers()
 		self.wfile.write(text)
-		self.wfile.close();
+		self.wfile.close()
+	
+	def redirect(self, link):
+		self.send_response(301)
+		self.send_header('Content-type','text/html')
+		self.send_header('Location', link)
+		self.end_headers()
 if __name__ == '__main__':
 	
 	PORT = 9991
