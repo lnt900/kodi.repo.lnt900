@@ -154,6 +154,14 @@ class MyRequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
 				self.send_header('Content-type','text/html')
 				self.send_header('Location', reslink)
 				self.end_headers()
+			elif parsed_params.path == '/logoutxmio':
+				global xmiocookie
+				xmio_user = str(xbmcaddon.Addon().getSetting('xmiouser'))
+				xmio_pw = str(xbmcaddon.Addon().getSetting('xmiopw'))
+				if not xmiocookie:xmiocookie = xmiologin(xmio_user,xmio_pw)
+				devid = str(xbmcaddon.Addon().getSetting('xmio_deviceid'))
+				index = geturl('http://125.212.227.230:7001/billing/account?device_id=%s&action=logout' %devid,cookies=xmiocookie)
+				self.dummy(200,'VNIPTV: Logged out Xmio')
 			else:self.dummy(200,'VNIPTV Service')
 	def dummy(self,head,text):
 		self.send_response(int(head))
