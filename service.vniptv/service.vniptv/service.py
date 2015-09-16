@@ -128,6 +128,8 @@ class MyRequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
 					index = geturl(xvar,cookies=xmiocookie)
 				if "url" in index and 'data' in index:
 					lnk = json.loads(index)['data']['url']
+					lnk = re.sub('\$_p3.+\$','$',lnk)
+					lnk = re.sub('\$_p2.+\$','$',lnk)
 					if quality:reslink = re.sub('\$_p5.+/','/',lnk)
 					else:reslink = re.sub('\$_p4.+\$','$',lnk)
 				else: reslink = "blank.mp4"
