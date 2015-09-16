@@ -1,72 +1,72 @@
 ﻿<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <addons>
-	<addon id="repository.lnt900" name="Lnt900's Repository" version="1.0.0" provider-name="lnt900">
-		<requires>
-			<import addon="xbmc.addon" version="12.0.0"/>
-		</requires>
-		<extension point="xbmc.addon.repository" name="Lnt900 Kodi Add-on Repository">
-			<info compressed="true">https://raw.githubusercontent.com/lnt900/kodi.repo.lnt900/master/addons.xml</info>
-			<checksum>https://raw.githubusercontent.com/lnt900/kodi.repo.lnt900/master/addons.xml.md5</checksum>
-			<datadir zip="true">https://raw.githubusercontent.com/lnt900/kodi.repo.lnt900/master</datadir>
-			<hashes>true</hashes>
-		</extension>
-		<extension point="xbmc.addon.metadata">
-			<summary>Created or edited add-ons by Lnt900</summary>
-			<description>Video and Service Addons for Vietnamese</description>
-			<platform>all</platform>
-		</extension>
-	</addon>
-	
-	<addon id="service.vniptv"
-		   name="VNIPTV Service"
-		   version="1.0.3"
-		   provider-name="lnt900">
-	  <requires>
-		<import addon="xbmc.python" version="2.1.0"/>
-	  </requires>
-	  <extension point="xbmc.service" library="service.py" start="login" />
-	  <extension point="xbmc.addon.metadata">
+<addon id="repository.lnt900" name="Lnt900's Repository" version="1.0.0" provider-name="lnt900">
+	<requires>
+		<import addon="xbmc.addon" version="12.0.0"/>
+	</requires>
+	<extension point="xbmc.addon.repository" name="Lnt900 Kodi Add-on Repository">
+		<info compressed="true">https://raw.githubusercontent.com/lnt900/kodi.repo.lnt900/master/addons.xml</info>
+		<checksum>https://raw.githubusercontent.com/lnt900/kodi.repo.lnt900/master/addons.xml.md5</checksum>
+		<datadir zip="true">https://raw.githubusercontent.com/lnt900/kodi.repo.lnt900/master</datadir>
+		<hashes>true</hashes>
+	</extension>
+	<extension point="xbmc.addon.metadata">
+		<summary>Created or edited add-ons by Lnt900</summary>
+		<description>Video and Service Addons for Vietnamese</description>
 		<platform>all</platform>
-		<summary lang="en">Service to watching vietnamese TV providers with PVR Simple IPTV</summary>
-		<description lang="en"></description>
-		<website></website>
-		<email>lnt900@gmail.com</email>
-	  </extension>
-	</addon>
+	</extension>
+</addon>
 
-	<addon
-	  id="plugin.video.hdviet"
-	  version="1.1.1"
-	  name="HDViet"
-	  provider-name="lnt900">
-	  <requires>
-		<import addon="xbmc.python" version="2.1.0"/>
-	  </requires>
-	  <extension point="xbmc.python.pluginsource" library="default.py">
-			<provides>video</provides>
-	  </extension>
-	  <extension point="xbmc.addon.metadata">
-		<summary>HDViet</summary>
-		<description>Watch free videos from hdviet.com</description>
-		<platform>all</platform>
-	  </extension>
-	</addon>
+<addon id="service.vniptv"
+       name="VNIPTV Service"
+       version="1.0.4"
+       provider-name="lnt900">
+  <requires>
+    <import addon="xbmc.python" version="2.1.0"/>
+  </requires>
+  <extension point="xbmc.service" library="service.py" start="login" />
+  <extension point="xbmc.addon.metadata">
+    <platform>all</platform>
+    <summary lang="en">Service to watching vietnamese TV providers with PVR Simple IPTV</summary>
+	<description lang="en"></description>
+	<website></website>
+	<email>lnt900@gmail.com</email>
+  </extension>
+</addon>
 
-	<addon
-	  id="plugin.video.hayhaytv-kodi"
-	  version="1.0.1"
-	  name="HayHayTV"
-	  provider-name="lnt900">
-	  <requires>
-		<import addon="xbmc.python" version="2.1.0"/>
-	  </requires>
-	  <extension point="xbmc.python.pluginsource" library="default.py">
-			<provides>video</provides>
-	  </extension>
-	  <extension point="xbmc.addon.metadata">
-		<summary>hayhaytv</summary>
-		<description>Watch hayhaytv.vn (Vietnamese) Videos</description>
-		<platform>all</platform>
-	  </extension>
-	</addon>
+<addon
+  id="plugin.video.hdviet"
+  version="1.1.1"
+  name="HDViet"
+  provider-name="lnt900">
+  <requires>
+    <import addon="xbmc.python" version="2.1.0"/>
+  </requires>
+  <extension point="xbmc.python.pluginsource" library="default.py">
+        <provides>video</provides>
+  </extension>
+  <extension point="xbmc.addon.metadata">
+    <summary>HDViet</summary>
+    <description>Watch free videos from hdviet.com</description>
+    <platform>all</platform>
+  </extension>
+</addon>
+
+<addon
+  id="plugin.video.hayhaytv-kodi"
+  version="1.0.1"
+  name="HayHayTV"
+  provider-name="lnt900">
+  <requires>
+    <import addon="xbmc.python" version="2.1.0"/>
+  </requires>
+  <extension point="xbmc.python.pluginsource" library="default.py">
+        <provides>video</provides>
+  </extension>
+  <extension point="xbmc.addon.metadata">
+    <summary>hayhaytv</summary>
+    <description>Watch hayhaytv.vn (Vietnamese) Videos</description>
+    <platform>all</platform>
+  </extension>
+</addon>
 </addons>

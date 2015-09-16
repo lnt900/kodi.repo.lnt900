@@ -142,7 +142,14 @@ class MyRequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
 				sctv_user = str(xbmcaddon.Addon().getSetting('sctvuser'))
 				global sctvhash
 				if not sctvhash:sctvhash = sctvlogin(sctv_user)
-				link = 'http://vtsstr6.sctv.vn/mslive2/%s/playlist.m3u8?us=%s' %(parsed_params.query,sctvhash)
+				sv = 'mslive2'
+				channel = ''
+				if '/' in parsed_params.query:
+					clink = parsed_params.query.split('/')
+					sv = clink[0]
+					channel = clink[1]
+				else:channel = parsed_params.query
+				link = 'http://112.197.2.135:1935/%s/%s/playlist.m3u8?us=%s' %(sv,channel,sctvhash)
 				index = geturl(link)
 				if not index or 'chunklist' not in index:
 					sctvhash = sctvlogin(sctv_user)

@@ -3,7 +3,7 @@
   id="plugin.video.hdviet"
   version="1.1.1"
   name="HDViet"
-  provider-name="Anphunl">
+  provider-name="lnt900">
   <requires>
     <import addon="xbmc.python" version="2.1.0"/>
   </requires>
