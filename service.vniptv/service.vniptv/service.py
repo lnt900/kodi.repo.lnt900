@@ -34,9 +34,9 @@ def encryptAES(st, key, iv):
 	le = len(st)/16
 	thua = len(st) % 16
 	if thua != 0: le += 1
-	st += '\x00'*thua
+	st += ' '*thua
 	encrypted = ''
-	for x in range(0,le-1):
+	for x in range(0,le):
 		en = st[x*16:x*16+16]
 		encrypted += binascii.hexlify(aes.encrypt(en))
 	return encrypted
@@ -139,11 +139,12 @@ class MyRequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
 					sv = clink[0]
 					channel = clink[1]
 				else:channel = parsed_params.query
-				index = geturl('http://112.197.2.135:%s/%s/%s/playlist.m3u8?us=%s' %(sctv_port,sv,channel,sctvhash))
+				url = 'http://112.197.2.135:%s/%s/%s/playlist.m3u8?us=%s'
+				index = geturl(url%(sctv_port,sv,channel,sctvhash))
 				if not index or 'chunklist' not in index:
 					sctvhash = sctvlogin(sctv_user)
-					index = geturl('http://112.197.2.135:%s/%s/%s/playlist.m3u8?us=%s' %(sctv_port,sv,channel,sctvhash))
-				if index and 'chunklist' in index:reslink = 'http://112.197.2.135:%s/%s/%s/playlist.m3u8?us=%s' %(sctv_port,sv,channel,sctvhash)
+					index = geturl(url%(sctv_port,sv,channel,sctvhash))
+				if index and 'chunklist' in index:reslink = url %(sctv_port,sv,channel,sctvhash)
 				else:reslink = 'blank.mp4'
 				self.redirect(reslink)
 			elif parsed_params.path == '/logoutxmio':
