@@ -362,10 +362,11 @@ def play(movie_id, ep = 0):
 			ln = rs.splitlines()
 			i = 0
 			while (i < len(ln)):
-				if 'audioindex=' in ln[i]:
+				if '.ts' in ln[i] and '/' in ln[i]:
 					break
 				i += 1
-			rx = re.sub('media.+%d' %audio_index,'',ln[i])
+			arlk = ln[i].split('/')
+			rx = ln[i].replace(arlk[len(arlk)-1],'')
 			rq = rx + 'playlist.m3u8'
 			rs = make_request(rq, None, header_app)
 			result= rs.replace('chunklist','%schunklist'%rx)
