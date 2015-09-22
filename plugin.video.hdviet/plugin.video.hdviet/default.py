@@ -15,7 +15,7 @@ subtitle_lang = my_addon.getSetting('subtitle')
 npp = str(my_addon.getSetting('npp'))
 video_quality = my_addon.getSetting('video_quality')
 use_api = my_addon.getSetting('info_method') == 'API'
-use_vi_audio = my_addon.getSetting('sound') != '2.0'
+tm_notice = my_addon.getSetting('tm_notice') == 'true'
 use_dolby_audio = my_addon.getSetting('sound') == '5.1'
 try_fullhd = my_addon.getSetting('tryfullhd') == 'true'
 fullhd_free = my_addon.getSetting('fullhdfree') == 'true'
@@ -185,6 +185,7 @@ def search():
 	if query != '':
 		if use_api:
 			if not is_ascii(query):query = convert_vi_to_en(query)
+			query = urllib.quote(query)
 			movies_from_search_api(query, '1')
 		else:movies_from_url('http://movies.hdviet.com/tim-kiem.html?keyword=%s&page=1' % urllib.quote(query, ''), '1')
 def is_ascii(s):
@@ -337,11 +338,13 @@ def play(movie_id, ep = 0):
 
 		# audioindex
 		audio_index = 0
-		if use_vi_audio and movie['Audio'] > 0:
-			if use_dolby_audio:
-				audio_index = 2
+		use_vi_audio = False
+		if tm_notice and movie['Audio'] > 0:
+			use_vi_audio = xbmcgui.Dialog().yesno('HDViet', '[COLOR green][B]%s[/B][/COLOR]' %movie['MovieName'],'Phim này có thuyết minh tiếng việt','Bạn có muốn sử dụng audio thuyết minh ?',nolabel='Không',yeslabel='Có',autoclose=10000)
+		if use_vi_audio and movie['Audio'] > 0:audio_index = 1
+		elif use_dolby_audio:
+			if movie['Audio'] > 0:audio_index = 2
 			else:audio_index = 1
-		elif movie['Audio'] == 0 and use_dolby_audio:audio_index = 1
 		
 		# get link and resolution
 		got = False
@@ -368,9 +371,12 @@ def play(movie_id, ep = 0):
 			arlk = ln[i].split('/')
 			rx = ln[i].replace(arlk[len(arlk)-1],'')
 			rq = rx + 'playlist.m3u8'
-			rs = make_request(rq, None, header_app)
-			result= rs.replace('chunklist','%schunklist'%rx)
-			got = True
+			try:
+				rs = make_request(rq, None, header_app)
+				if 'chunklist' in rs:
+					result= rs.replace('chunklist','%schunklist'%rx)
+					got = True
+			except:pass
 		if not got:
 			link_to_play = lp
 			result = make_request(link_to_play, None, header_app)
@@ -415,33 +421,34 @@ def play(movie_id, ep = 0):
 def set_resolved_url(stream_url, subtitle_url):
 	h1 = '|User-Agent=' + urllib.quote_plus('HDViet/2.0.1 CFNetwork/711.2.23 Darwin/14.0.0')
 	h2 = '&Accept=' + urllib.quote_plus('*/*')
-	h3 = '&Accept-Language=' + urllib.quote_plus('en-us')
-	h4 = '&Connection=' + urllib.quote_plus('Keep-Alive')
-	h5 = '&Accept-Encoding=' + urllib.quote_plus('gzip, deflate')
-	xbmcplugin.setResolvedUrl(addon_handle, succeeded=True, listitem=xbmcgui.ListItem(label = '', path = stream_url + h1 + h2 + h3 + h5))
-	player = xbmc.Player()
+	xbmcplugin.setResolvedUrl(addon_handle, succeeded=True, listitem=xbmcgui.ListItem(label = '', path = stream_url))
 	
-	subtitlePath = xbmc.translatePath(xbmcaddon.Addon().getAddonInfo('path')).decode("utf-8")
-	subfile = xbmc.translatePath(os.path.join(subtitlePath, "temp.sub"))
+	datapath=xbmc.translatePath(xbmcaddon.Addon().getAddonInfo('profile')).decode("utf-8")
+	subtitlePath = os.path.join(datapath,'subs')
 	try:
-		if os.path.exists(subfile):
-			os.remove(subfile)
-		f = urllib2.urlopen(subtitle_url)
-		with open(subfile, "wb") as code:
-			code.write(f.read())
-		xbmc.sleep(3000)
-		xbmc.Player().setSubtitles(subfile)
+		if subtitle_url != '':
+			sublink = subtitle_url.split('/')
+			subfile = os.path.join(subtitlePath, sublink[len(sublink)-1])
+			if not os.path.exists(subtitlePath):os.mkdir(subtitlePath)
+			for file in os.listdir(subtitlePath):
+				if os.path.isfile(os.path.join(subtitlePath,file)):
+					try:os.remove(os.path.join(subtitlePath,file))
+					except:pass
+			f = urllib2.urlopen(subtitle_url)
+			with open(subfile, "wb") as code:
+				code.write(f.read())
+			xbmc.sleep(1000)
+			timeout = 0
+			while not xbmc.Player().isPlaying() and timeout < 60:
+				xbmc.sleep(500)
+				timeout += 1
+			if timeout < 60:
+				xbmc.Player().setSubtitles(subfile)
+				xbmc.executebuiltin((u'XBMC.Notification(%s,%s,%s)'%('HDViet','[COLOR green]Subtitle Loaded ![/COLOR]',2000)).encode("utf-8"))
+			else:xbmc.executebuiltin((u'XBMC.Notification(%s,%s,%s)'%('HDViet','[COLOR red]Connection timed out ![/COLOR]',2000)).encode("utf-8"))
 	except:
 		pass
-	
-	for _ in xrange(30):
-		if player.isPlaying():
-			break
-		time.sleep(1)
-	else:
-		raise Exception('No video playing. Aborted after 30 seconds.')
 
-	
 def build_url(query):
 	return base_url + '?' + urllib.urlencode(query)
 
