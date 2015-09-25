@@ -7,6 +7,7 @@ import urllib2, urllib
 import re, json, hashlib
 import xml.etree.ElementTree as xmltree
 import resources.pyaes as pythonaes
+from random import randint
 
 xmiocookie = False
 sctvhash = False
@@ -32,9 +33,11 @@ def geturl(url,param=False,ecoding_param=True,cookies=False,getcookies=False,cus
 def encryptAES(st, key, iv):
 	aes = pythonaes.AESModeOfOperationCBC(key, iv = iv)
 	le = len(st)/16
-	thua = len(st) % 16
-	if thua != 0: le += 1
-	st += ' '*thua
+	thua = len(st)%16
+	if thua != 0:
+		le += 1
+		thieu = 16-thua
+		st += ' '*thieu
 	encrypted = ''
 	for x in range(0,le):
 		en = st[x*16:x*16+16]
@@ -60,15 +63,20 @@ def xmiologin(user,pw):
 		xbmc.executebuiltin((u'XBMC.Notification(%s,%s,%s)'%('VNIPTV','[COLOR red]Lỗi Xmio! Kiểm tra user/password trong addon setting[/COLOR]',4000)).encode("utf-8"))
 		return False
 def sctvlogin(email):
+	ranst = hex(randint(65536,15728600)).lstrip('0x').upper()
+	ranmac = '%s:%s:%s' %(ranst[0:2],ranst[2:4],ranst[4:6])
+	aid = 'ff27125408%s' %str(hex(randint(65536,15728640)).lstrip('0x'))
 	c = {'Content-Type': 'text/xml'}
-	res = geturl('https://vtspub.sctv.vn:8444/adphone/WSV_SctvOnline_Sec_Mobile.asmx','<v:Envelope xmlns:i="http://www.w3.org/2001/XMLSchema-instance" xmlns:d="http://www.w3.org/2001/XMLSchema" xmlns:c="http://schemas.xmlsoap.org/soap/encoding/" xmlns:v="http://schemas.xmlsoap.org/soap/envelope/"><v:Header /><v:Body><USP_GetGenPIN xmlns="http://vtspub.sctv.vn/" id="o0" c:root="1"><arg0 i:type="d:string">%s</arg0><arg1 i:type="d:string"></arg1><arg2 i:type="d:string">ff27125408e3be22</arg2><arg3 i:type="d:string">B4:52:00:00:00:00</arg3><arg4 i:type="d:string">358090000000000</arg4><arg5 i:type="d:string">0</arg5><arg98 i:type="d:string">ScolMBV3</arg98><arg99 i:type="d:string">QazCDE#@!</arg99></USP_GetGenPIN></v:Body></v:Envelope>' %email,ecoding_param=False,cookies=c,customct=True)
+	res = geturl('https://vtspub.sctv.vn:8444/adphone/WSV_SctvOnline_Sec_Mobile.asmx','<v:Envelope xmlns:i="http://www.w3.org/2001/XMLSchema-instance" xmlns:d="http://www.w3.org/2001/XMLSchema" xmlns:c="http://schemas.xmlsoap.org/soap/encoding/" xmlns:v="http://schemas.xmlsoap.org/soap/envelope/"><v:Header /><v:Body><USP_GetGenPIN xmlns="http://vtspub.sctv.vn/" id="o0" c:root="1"><arg0 i:type="d:string">%s</arg0><arg1 i:type="d:string"></arg1><arg2 i:type="d:string">%s</arg2><arg3 i:type="d:string">B4:52:00:%s</arg3><arg4 i:type="d:string">3580900%s</arg4><arg5 i:type="d:string">0</arg5><arg98 i:type="d:string">ScolMBV3</arg98><arg99 i:type="d:string">QazCDE#@!</arg99></USP_GetGenPIN></v:Body></v:Envelope>' %(email,aid,ranmac,str(randint(20000000,90000000))),ecoding_param=False,cookies=c,customct=True)
 	try:
 		xml = xmltree.fromstring(res)
 		sctvkeys = {'id': xml[0][0][0][0].text,'pin':xml[0][0][0][1].text,'iv':xml[0][0][0][2].text}
-		sctvhash = encryptAES('%s-0-ff27125408e3be22-1-22' %email, sctvkeys['pin'], sctvkeys['iv'])
+		sctvhash = encryptAES('%s-0-%s-1-22' %(email,aid), sctvkeys['pin'], sctvkeys['iv'])
 		sctvhash += '-%s' %sctvkeys['id']
 		return sctvhash
-	except:return False
+	except:
+		xbmc.executebuiltin((u'XBMC.Notification(%s,%s,%s)'%('VNIPTV','[COLOR red]Lỗi SCTV! Login không thành công[/COLOR]',4000)).encode("utf-8"))
+		return False
 def getFPT(id):
 	vtvcab = ['bibi','bongdatvhd','thethaotvhd','bongdatvsd','thethaotvsd','giaitritv','styletv','yeah1tv','kenh17','haytv','o2tv','investtv','infotv','echanel','phimviet','ddramas']
 	isvtvcab = False
@@ -101,6 +109,8 @@ class MyRequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
 		if self.path == '/':self.dummy(200,'VNIPTV Service')
 		else:
 			parsed_params = urlparse.urlparse(self.path)
+			global sctvhash
+			global xmiocookie
 			if parsed_params.path == '/fpt':
 				reslink = getFPT(parsed_params.query)
 				self.redirect(reslink)
@@ -111,50 +121,59 @@ class MyRequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
 				xmio_user = str(xbmcaddon.Addon().getSetting('xmiouser'))
 				xmio_pw = str(xbmcaddon.Addon().getSetting('xmiopw'))
 				quality = str(xbmcaddon.Addon().getSetting('xmio_quality')) == '4'
-				global xmiocookie
 				chid = parsed_params.query
 				if not xmiocookie:xmiocookie = xmiologin(xmio_user,xmio_pw)
-				xvar = "http://125.212.227.230:7001/live/index?action=get_stream&channel_id=%s&device_Type=stb" % chid
-				index = geturl(xvar,cookies=xmiocookie)
-				if not "url" in index and not 'data' in index:
-					xmiocookie = xmiologin(xmio_user,xmio_pw)
+				reslink = "blank.mp4"
+				if xmiocookie:
+					xvar = "http://125.212.227.230:7001/live/index?action=get_stream&channel_id=%s&device_Type=stb" % chid
 					index = geturl(xvar,cookies=xmiocookie)
-				if "url" in index and 'data' in index:
-					lnk = json.loads(index)['data']['url']
-					lnk = re.sub('\$_p3.+\$','$',lnk)
-					lnk = re.sub('\$_p2.+\$','$',lnk)
-					if quality:reslink = re.sub('\$_p5.+/','/',lnk)
-					else:reslink = re.sub('\$_p4.+\$','$',lnk)
-				else: reslink = "blank.mp4"
+					if not "url" in index or not 'data' in index:
+						xmiocookie = xmiologin(xmio_user,xmio_pw)
+						if xmiocookie:index = geturl(xvar,cookies=xmiocookie)
+					if "url" in index and 'data' in index:
+						lnk = json.loads(index)['data']['url']
+						lnk = re.sub('\$_p3.+\$','$',lnk)
+						lnk = re.sub('\$_p2.+\$','$',lnk)
+						if quality:reslink = re.sub('\$_p5.+/','/',lnk)
+						else:reslink = re.sub('\$_p4.+\$','$',lnk)
+					else: reslink = "blank.mp4"
+				else:reslink = "blank.mp4"
 				self.redirect(reslink)
 			elif parsed_params.path == '/sctv':
 				sctv_user = str(xbmcaddon.Addon().getSetting('sctvuser'))
 				sctv_port = str(xbmcaddon.Addon().getSetting('sctv_port'))
-				global sctvhash
 				if not sctvhash:sctvhash = sctvlogin(sctv_user)
-				sv = 'mslive2'
-				channel = ''
-				if '/' in parsed_params.query:
-					clink = parsed_params.query.split('/')
-					sv = clink[0]
-					channel = clink[1]
-				else:channel = parsed_params.query
-				url = 'http://112.197.2.135:%s/%s/%s/playlist.m3u8?us=%s'
-				index = geturl(url%(sctv_port,sv,channel,sctvhash))
-				if not index or 'chunklist' not in index:
-					sctvhash = sctvlogin(sctv_user)
+				reslink = "blank.mp4"
+				if sctvhash:
+					sv = 'mslive2'
+					channel = ''
+					if '/' in parsed_params.query:
+						clink = parsed_params.query.split('/')
+						sv = clink[0]
+						channel = clink[1]
+					else:channel = parsed_params.query
+					url = 'http://112.197.2.135:%s/%s/%s/playlist.m3u8?us=%s'
 					index = geturl(url%(sctv_port,sv,channel,sctvhash))
-				if index and 'chunklist' in index:reslink = url %(sctv_port,sv,channel,sctvhash)
-				else:reslink = 'blank.mp4'
+					if not index or 'chunklist' not in index:
+						sctvhash = sctvlogin(sctv_user)
+						if sctvhash:index = geturl(url%(sctv_port,sv,channel,sctvhash))
+					if index and 'chunklist' in index:
+						for xx in index.splitlines():
+							if 'chunklist' in xx and 'm3u' in xx:
+								reslink = 'http://112.197.2.135:%s/%s/%s/%s' %(sctv_port,sv,channel,xx)
+								break
+					else:reslink = 'blank.mp4'
+				else:reslink = 'cantgetsctvhash.mp4'
 				self.redirect(reslink)
 			elif parsed_params.path == '/logoutxmio':
-				global xmiocookie
 				xmio_user = str(xbmcaddon.Addon().getSetting('xmiouser'))
 				xmio_pw = str(xbmcaddon.Addon().getSetting('xmiopw'))
-				if not xmiocookie:xmiocookie = xmiologin(xmio_user,xmio_pw)
-				devid = str(xbmcaddon.Addon().getSetting('xmio_deviceid'))
-				index = geturl('http://125.212.227.230:7001/billing/account?device_id=%s&action=logout' %devid,cookies=xmiocookie)
-				self.dummy(200,'VNIPTV: Logged out Xmio')
+				try:
+					if not xmiocookie:xmiocookie = xmiologin(xmio_user,xmio_pw)
+					devid = str(xbmcaddon.Addon().getSetting('xmio_deviceid'))
+					index = geturl('http://125.212.227.230:7001/billing/account?device_id=%s&action=logout' %devid,cookies=xmiocookie)
+					self.dummy(200,'VNIPTV: Logged out Xmio')
+				except:pass
 			else:self.dummy(404,'VNIPTV 404: Not Found')
 	
 	def dummy(self,head,text):
