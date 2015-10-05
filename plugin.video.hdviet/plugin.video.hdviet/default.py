@@ -318,9 +318,11 @@ def play(movie_id, ep = 0):
 		if token != 'fail':
 			res = make_request(urlx % (movie_id, token, ep), None, header_app)
 		else: return
-	movie = json.loads(res)["r"]
+	resj = json.loads(res)
+	movie = resj["r"]
 	vip = my_addon.getSetting('vip') == 'true'
-	if vip:
+	resvip = False
+	if vip or resj['e'] == 1:
 		resvip = make_request(url %(movie_id,ep), None, header_api)
 		lp = json.loads(resvip)["data"]["playList"]
 	else:lp = movie['LinkPlay']
@@ -328,23 +330,28 @@ def play(movie_id, ep = 0):
 		subtitle_url = ''
 		if subtitle_lang != 'Tắt':
 			try:
-				subtitle_url = movie['Subtitle'][subtitle_lang]['Source']
-				if subtitle_url == '':
-					subtitle_url = movie['SubtitleExt'][subtitle_lang]['Source']
-				if subtitle_url == '':
-					subtitle_url = movie['SubtitleExtSe'][subtitle_lang]['Source']
+				if resj['e'] == 1 and resvip:
+					for sub in json.loads(resvip)['data']['subtitle']:
+						if sub['sub'] == subtitle_lang:subtitle_url = sub['source']
+				else:
+					subtitle_url = movie['Subtitle'][subtitle_lang]['Source']
+					if subtitle_url == '':
+						subtitle_url = movie['SubtitleExt'][subtitle_lang]['Source']
+					if subtitle_url == '':
+						subtitle_url = movie['SubtitleExtSe'][subtitle_lang]['Source']
 			except:
 				pass
 
 		# audioindex
 		audio_index = 0
 		use_vi_audio = False
-		if tm_notice and movie['Audio'] > 0:
-			use_vi_audio = xbmcgui.Dialog().yesno('HDViet', '[COLOR green][B]%s[/B][/COLOR]' %movie['MovieName'],'Phim này có thuyết minh tiếng việt','Bạn có muốn sử dụng audio thuyết minh ?',nolabel='Không',yeslabel='Có',autoclose=10000)
-		if use_vi_audio and movie['Audio'] > 0:audio_index = 1
-		elif use_dolby_audio:
-			if movie['Audio'] > 0:audio_index = 2
-			else:audio_index = 1
+		if resj['e'] != 1:
+			if tm_notice and movie['Audio'] > 0:
+				use_vi_audio = xbmcgui.Dialog().yesno('HDViet', '[COLOR green][B]%s[/B][/COLOR]' %movie['MovieName'],'Phim này có thuyết minh tiếng việt','Bạn có muốn sử dụng audio thuyết minh ?',nolabel='Không',yeslabel='Có',autoclose=10000)
+			if use_vi_audio and movie['Audio'] > 0:audio_index = 1
+			elif use_dolby_audio:
+				if movie['Audio'] > 0:audio_index = 2
+				else:audio_index = 1
 		
 		# get link and resolution
 		got = False
