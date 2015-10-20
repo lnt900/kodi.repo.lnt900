@@ -4,7 +4,7 @@ import urlparse, binascii
 import SimpleHTTPServer
 import SocketServer
 import urllib2, urllib
-import re, json, hashlib
+import re, json, hashlib, string
 import xml.etree.ElementTree as xmltree
 import resources.pyaes as pythonaes
 from random import randint
@@ -71,6 +71,7 @@ def sctvlogin(email):
 	try:
 		xml = xmltree.fromstring(res)
 		sctvkeys = {'id': xml[0][0][0][0].text,'pin':xml[0][0][0][1].text,'iv':xml[0][0][0][2].text}
+		#sys.stdout.write("VNIPTV: sctv login - %s/%s/%s/%s/%s" %(email,aid,sctvkeys['pin'], sctvkeys['iv'],sctvkeys['id']))
 		sctvhash = encryptAES('%s-0-%s-1-22' %(email,aid), sctvkeys['pin'], sctvkeys['iv'])
 		sctvhash += '-%s' %sctvkeys['id']
 		return sctvhash
@@ -83,12 +84,23 @@ def getFPT(id):
 	if id in vtvcab:
 		isvtvcab = id
 		id = 'htv9-hd'
-	data={"id": id, "quality": "4",	"mobile": "web"}
+	data={"id": id, "type": "newchannel", "quality": "4",	"mobile": "web"}
 	cookie = {'Referer' : "http://fptplay.net/livetv", "X-Requested-With" : "XMLHttpRquest"}
 	info = json.loads(geturl('http://fptplay.net/show/getlinklivetv',data,cookies=cookie))
 	if info['stream']:
-		if isvtvcab: return info['stream'].replace('htv9HD',isvtvcab)
-		else:return info['stream']
+		stream = info['stream']
+		if isvtvcab:
+			ret = info['stream'].replace('htv9hd',isvtvcab).replace('livek/','livev/')
+			if isvtvcab.endswith('hd'):ret = ret.replace('_hls.smil','_2000.stream')
+			stream = ret
+		rs = geturl(stream)
+		rt = "blank.mp4"
+		ln = rs.splitlines()
+		i = 0
+		while (i < len(ln)):
+			if 'chunklist' in ln[i]:rt = re.sub('playlist.+',ln[i],stream)
+			i += 1
+		return rt
 	else: return "blank.mp4"
 def getHTV(channel):
 	link = "http://www.htvonline.com.vn/livetv/%s.html" %channel
@@ -120,7 +132,7 @@ class MyRequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
 			elif parsed_params.path == '/xmio':
 				xmio_user = str(xbmcaddon.Addon().getSetting('xmiouser'))
 				xmio_pw = str(xbmcaddon.Addon().getSetting('xmiopw'))
-				quality = str(xbmcaddon.Addon().getSetting('xmio_quality')) == '4'
+				quality = str(xbmcaddon.Addon().getSetting('xmio_hd')) == 'HD'
 				chid = parsed_params.query
 				if not xmiocookie:xmiocookie = xmiologin(xmio_user,xmio_pw)
 				reslink = "blank.mp4"
@@ -132,10 +144,15 @@ class MyRequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
 						if xmiocookie:index = geturl(xvar,cookies=xmiocookie)
 					if "url" in index and 'data' in index:
 						lnk = json.loads(index)['data']['url']
-						lnk = re.sub('\$_p3.+\$','$',lnk)
 						lnk = re.sub('\$_p2.+\$','$',lnk)
-						if quality:reslink = re.sub('\$_p5.+/','/',lnk)
-						else:reslink = re.sub('\$_p4.+\$','$',lnk)
+						lnk = re.sub('\$_p4.+\$','$',lnk)
+						if quality:
+							lnk = re.sub('\$_p3.+/','$_p5!3000000!0!1280!720/',lnk)
+							lnk = re.sub('\$_p3.+\$','$',lnk)
+						else:
+							lnk = re.sub('\$_p5.+/','/',lnk)
+							lnk = lnk.replace('$/','/')
+						reslink = lnk
 					else: reslink = "blank.mp4"
 				else:reslink = "blank.mp4"
 				self.redirect(reslink)
@@ -163,7 +180,9 @@ class MyRequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
 								reslink = 'http://112.197.2.135:%s/%s/%s/%s' %(sctv_port,sv,channel,xx)
 								break
 					else:reslink = 'blank.mp4'
-				else:reslink = 'cantgetsctvhash.mp4'
+				else:
+					sys.stdout.write("VNIPTV: can't get sctv hash !")
+					reslink = 'cantgetsctvhash.mp4'
 				self.redirect(reslink)
 			elif parsed_params.path == '/logoutxmio':
 				xmio_user = str(xbmcaddon.Addon().getSetting('xmiouser'))
