@@ -333,11 +333,11 @@ def addVideoSources():
 	source_path = os.path.join(xbmc.translatePath('special://profile/'), 'sources.xml')
 	try:
 		file = open(source_path, 'r')
-		contents=file.read()
+		content=file.read()
 		file.close()
 	except:
-		dialog.ok("Error","Could not read from sources.xml, does it really exist?")
-		file = open(source_path, 'w')
+		#dialog.ok("Error","Could not read from sources.xml, does it really exist?")
+		#file = open(source_path, 'w')
 		content = "<sources>\n"
 		content += "    <programs>"
 		content += "        <default pathversion=\"1\"></default>"
@@ -355,10 +355,10 @@ def addVideoSources():
 		content += "        <default pathversion=\"1\"></default>"
 		content += "    </files>"
 		content += "</sources>"
-		file.close()
+		#file.close()
 	
-	soup = BeautifulSoup(contents)  
-	video = soup.find("video")      
+	soup = BeautifulSoup(content)
+	video = soup.find("video")
 	
 	if len(soup.findAll(text="MoviesLib")) < 1:
 		movie_source_tag = Tag(soup, "source")
