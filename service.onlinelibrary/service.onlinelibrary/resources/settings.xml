@@ -1,0 +1,7 @@
+﻿<settings>
+	<setting id="fshare_email" default="" type="text" label="Email Fshare"/>
+	<setting id="fshare_password" default="" type="text" option="hidden" label="Password Fshare"/>
+	<setting id="lastupdate" type="number" visible="false" default="0" label="Lastupdate"/>
+	<setting id="lastsync" type="number" visible="false" default="0" label="LastSync"/>
+	<setting id="firstrun" type="number" visible="false" default="1" label="Firstrun"/>
+</settings>
