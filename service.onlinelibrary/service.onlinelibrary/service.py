@@ -44,9 +44,16 @@ class MyRequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
 			elif self.path.endswith('.nfo'):
 				self.dummy(200,echonfo(self.path[1:]))
 			elif self.path.endswith('.strm'):
-				paths = self.path[1:].split('/')
-				f = paths[len(paths)-1][0:-5]
-				self.dummy(200,'%s.mkv'%f)
+				pathx = self.path[1:]
+				f = pathx[0:-5]
+				play = mkvdirect('%s.mkv'%f)
+				if play != '':
+					subtitle = play['sub']
+					lnk = play['link']
+					if lnk.startswith('HDVIETM3ULINK'):lnk = lnk.replace('HDVIETM3ULINK/','http://')
+					self.dummy(200,lnk)
+				else:self.dummy(404,'')
+				#self.dummy(200,'%s.mkv'%f)
 			elif self.path.endswith('.m3u') or self.path.endswith('.m3u8'):
 				self.dummy(200,echom3u(self.path[1:]),'application/vnd.apple.mpegurl')
 			elif self.path.endswith('.srt'):
@@ -86,22 +93,43 @@ class MyMonitor(xbmc.Monitor):
 class MyPlayer(xbmc.Player):
 	
 	def onPlayBackStarted(self):
+		kVer = int(xbmc.__date__[-4:])
 		global subtitle
 		for retry in range(0, 20):
 			if player.isPlaying():break
 			xbmc.sleep(250)
 		if subtitle != '' and self.isPlayingVideo():
-			try:
-				link = self.getPlayingFile()
-				if link.startswith('http://127.0.0.1:5735/'):
-					sublink = subtitle.split('/')
-					subfile = os.path.join(xbmc.translatePath(xbmcaddon.Addon().getAddonInfo('profile')).decode("utf-8"), "subtitle.%s"%sublink[len(sublink)-1][-3:])
-					f = urllib2.urlopen(subtitle)
-					with open(subfile, "wb") as code:
-						code.write(f.read())
-					self.setSubtitles(subfile)
-			except:pass
-			subtitle = ''
+			link = self.getPlayingFile()
+			if link.startswith('http://127.0.0.1:5735/'):
+				if kVer < 2017 and link.endswith('mkv'):
+					play = mkvdirect(link.replace('http://127.0.0.1:5735/',''))
+					if play != '':
+						lnk = play['link']
+						if lnk.startswith('HDVIETM3ULINK'):
+							lnk = lnk.replace('HDVIETM3ULINK/','http://')
+							InfoTag = self.getVideoInfoTag()
+							#self.stop()
+							listitem = xbmcgui.ListItem (InfoTag.getTitle())
+							infolabels = {'Title': InfoTag.getTitle(), 'Genre': InfoTag.getGenre(),'plot':InfoTag.getPlot(),'year':InfoTag.getYear()}
+							if link.find('/Season')>-1:
+								info2 = {'mediatype': 'episode','tvshowtitle': xbmc.getInfoLabel('VideoPlayer.TVShowTitle'),'season': int(xbmc.getInfoLabel('VideoPlayer.Season')),'episode':int(xbmc.getInfoLabel('VideoPlayer.Episode'))}
+								infolabels.update(info2)
+							else:infolabels.update({'mediatype': 'movie'})
+							listitem.setInfo('video', infolabels)
+							listitem.setArt({'thumb':InfoTag.getPictureURL()})
+							listitem.setSubtitles([subtitle])
+							self.play(lnk,listitem)
+				else:
+					try:
+						sublink = subtitle.split('/')
+						subfile = os.path.join(xbmc.translatePath(xbmcaddon.Addon().getAddonInfo('profile')).decode("utf-8"), "subtitle.%s"%sublink[len(sublink)-1][-3:])
+						f = urllib2.urlopen(subtitle)
+						with open(subfile, "wb") as code:
+							code.write(f.read())
+						self.setSubtitles(subfile)
+					except:pass
+					subtitle = ''
+
 class ThreadedTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
     pass
 
