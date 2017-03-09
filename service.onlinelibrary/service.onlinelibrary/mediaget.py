@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
-import urllib2, urllib, re, os, json, string,xbmc
+import urllib2, urllib, re, os, json, string,xbmc, math
 from crypt import *
 
-__version__ = 1
-def geturl(url,param=False,ecoding_param=False,cookies=False,getcookies=False,customct=False):
+__version__ = 3
+def geturl(url,param=False,ecoding_param=False,agent=False,cookies=False,getcookies=False,customct=False):
 	headers={'User-Agent':'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:15.0) Gecko/20100101 Firefox/15.0.1'}
+	if agent:headers = agent
 	if cookies:headers.update(cookies)
 	try:
 		if param:
@@ -140,13 +141,99 @@ def get_movieVSHD(url):
 		rt = getVSHD(link)
 		if rt !='' and rt['link'].startswith('http'):break
 	return rt
+			
+def base_convert(number, fromBase, toBase):
+	try:
+		# Convert number to base 10
+		base10 = int(number, fromBase)
+	except ValueError:
+		raise
+	if toBase < 2 or toBase > 36:
+		raise NotImplementedError
+	output_value = ''
+	digits = "0123456789abcdefghijklmnopqrstuvwxyz"
+	sign = ''
+	if base10 == 0:
+		return '0'
+	elif base10 < 0:
+		sign = '-'
+		base10 = -base10
 
+	# Convert to base toBase    
+	s = ''
+	while base10 != 0:
+		r = base10 % toBase
+		r = int(r)
+		s = digits[r] + s
+		base10 //= toBase
+		
+	output_value = sign + s
+	return output_value
+	
+def genRE(c,a):
+	if c < a:s1 = ''
+	else:s1 = genRE(int(c/a),a)
+	c = c%a;
+	if c > 35:s2 = chr(c+29)
+	else:s2 = base_convert(str(c),10,36);
+	return s1+s2;
+
+def getHDO(url):
+	url = url.replace('://hdonline.vn/','://m.hdonline.vn/')
+	#url = url.replace('://www.hdonline.vn/','://m.hdonline.vn/')
+	useragent = {'User-Agent':'Mozilla/5.0 (Linux; Android 7.0; E6683 Build/32.3.A.0.376) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Mobile Safari/537.36'}
+	a=geturl(url,False,False,useragent)
+	var = regsearch('return p}\((.+)\.split',a)
+	vars = eval('['+var+']')
+	b = vars[3].split('|')
+	x = vars[0]
+	c = int(vars[2])
+	while c > -1:
+		c -= 1
+		if len(b) >= c and b[c] != '':x = re.sub(r'\b%s\b'%genRE(c,int(vars[1])),b[c],x)
+		
+	jstring = regsearch('setup\(([^\)]+?)\)',x)
+	js = json.loads(jstring)
+	if js.get('playlist') and len(js['playlist'])>0:
+		subtitle = ''
+		link = ''
+		sources = js['playlist'][0]['sources']
+		subs = js['playlist'][0]['tracks']
+		if len(subs)>0:
+			for sub in subs:
+				if sub.get('language') and sub['language'] == 'vi':
+					subtitle = sub['file']
+					break
+		if len(sources)>1:
+			biggest = 0
+			for url in sources:
+				if url['type'] == 'hls':
+					if url['label'].startswith('P.'):
+						link = url['file']
+						break
+					else:link = sources[0]['file']
+				else:
+					try:
+						label = int(url['label'].replace('p',''))
+						if label > biggest:
+							biggest = label
+							link = url['file']
+					except:pass
+		elif len(sources)==1:link = sources[0]['file']
+		if link != '':
+			if link.endswith('.m3u8'):link = link.replace('http://','HDVIETM3ULINK/')
+			return {'link': link, 'sub': subtitle}
+		else: return ''
+	else:return ''
+	
 def getMovie(url):
 	if url.startswith('http://www.phimmoi.net'):return get_moviePM(url)
 	elif url.startswith('hdviet.com'):return getHdviet(url)
 	elif url.startswith('http://www.vietsubhd.com'):return get_movieVSHD(url)
+	elif url.find('hdonline.vn/')>-1:return getHDO(url)
 
 def getTV(url):
 	if url.startswith('http://www.phimmoi.net'):return getPM(url)
 	elif url.startswith('hdviet.com'):return getHdviet(url)
-	elif url.startswith('vietsubhd.com'):return getVSHD(url)
+	elif url.startswith('http://www.vietsubhd.com'):return getVSHD(url)
+	elif url.find('hdonline.vn/')>-1:return getHDO(url)

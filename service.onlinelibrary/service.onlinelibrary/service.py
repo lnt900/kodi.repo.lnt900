@@ -102,13 +102,13 @@ class MyPlayer(xbmc.Player):
 			link = self.getPlayingFile()
 			if link.startswith('http://127.0.0.1:5735/'):
 				if kVer < 2017 and link.endswith('mkv'):
+					self.pause()
 					play = mkvdirect(link.replace('http://127.0.0.1:5735/',''))
 					if play != '':
 						lnk = play['link']
 						if lnk.startswith('HDVIETM3ULINK'):
 							lnk = lnk.replace('HDVIETM3ULINK/','http://')
 							InfoTag = self.getVideoInfoTag()
-							#self.stop()
 							listitem = xbmcgui.ListItem (InfoTag.getTitle())
 							infolabels = {'Title': InfoTag.getTitle(), 'Genre': InfoTag.getGenre(),'plot':InfoTag.getPlot(),'year':InfoTag.getYear()}
 							if link.find('/Season')>-1:
@@ -119,15 +119,10 @@ class MyPlayer(xbmc.Player):
 							listitem.setArt({'thumb':InfoTag.getPictureURL()})
 							listitem.setSubtitles([subtitle])
 							self.play(lnk,listitem)
+						else:self.pause()
+					else:self.pause()
 				else:
-					try:
-						sublink = subtitle.split('/')
-						subfile = os.path.join(xbmc.translatePath(xbmcaddon.Addon().getAddonInfo('profile')).decode("utf-8"), "subtitle.%s"%sublink[len(sublink)-1][-3:])
-						f = urllib2.urlopen(subtitle)
-						with open(subfile, "wb") as code:
-							code.write(f.read())
-						self.setSubtitles(subfile)
-					except:pass
+					self.setSubtitles(subtitle)
 					subtitle = ''
 
 class ThreadedTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
@@ -146,8 +141,9 @@ if __name__ == '__main__':
 	server_thread.start()
 	sys.stdout.write("Server started at Port %d" % PORT)
 	while not monitor.abortRequested():
+		waittime = int(my_addon.getSetting('updateinterval'))*60
 		updatedata()
-		if monitor.waitForAbort(2100):break
+		if monitor.waitForAbort(waittime):break
 	del monitor
 	del player
 	server.shutdown()

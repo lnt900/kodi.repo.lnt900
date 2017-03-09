@@ -170,8 +170,6 @@ def echofolder(path,scan):
 				filename = f.strip().split('|')
 				html += '<a href="%s.mkv">%s.mkv</a>\n' %(filename[0],filename[0])
 				html += '<a href="%s.nfo">%s.nfo</a>\n' %(filename[0],filename[0])
-				#html += '<a href="%s.strm">%s.strm</a>\n' %(filename[0],filename[0])
-				#html += '<a href="%s.srt">%s.srt</a>\n' %(filename[0],filename[0])
 				#if scan and lastmod > lastsync:
 					#global scanwrite
 					#scanwrite = True
@@ -245,6 +243,7 @@ def echonfo(path):
 	lastpaths = paths
 
 def mkvdirect(path):
+	autopick = my_addon.getSetting('autopickserver') == 'true'
 	reload(mediaget)
 	paths = path.split('/')
 	if paths[0] == 'movie':
@@ -253,9 +252,19 @@ def mkvdirect(path):
 		#if scan:links = json.load(openfile('movielinks','%s.json'%filename,False))
 		links = json.loads(geturl("%smovielinks/%s.json"%(server,filename)))
 		link = ''
+		nguon = []
 		for u in links:
-			link = mediaget.getMovie(u)
-			if link != '':break
+			if autopick:
+				link = mediaget.getMovie(u)
+				if link != '':break
+			else:
+				src = u.replace('http://','').replace('www.','').split('.')
+				nguon.append(src[0])
+		if not autopick:
+			if len(nguon)>1:
+				ret = xbmcgui.Dialog().select(u'Chọn nguồn phim', nguon)
+				if ret>-1:link = mediaget.getMovie(links[ret])
+			else:link = mediaget.getMovie(links[0])
 		return link
 	if paths[0] == 'tv':
 		season = urllib.unquote(paths[3]).replace('Season ','')
@@ -264,13 +273,28 @@ def mkvdirect(path):
 		data = json.load(f)
 		link = ''
 		backuplink = ''
+		nguon = []
+		medialinks = []
 		for epi in data['episodes']:
-			if int(epi['ep']) == int(epinfo):
-				if epi['sub'] == 'VietSub' or epi['sub'] == 'dubbing':
-					link = mediaget.getTV(epi['link'])
-				else:backuplink = epi['link']
-			if link != '' and link['link'].startswith('http'):break
-		if link == '' and backuplink != '':link = mediaget.getTV(backuplink)
+			if autopick:
+				if int(epi['ep']) == int(epinfo):
+					if epi['sub'] == 'VietSub' or epi['sub'] == 'dubbing':
+						link = mediaget.getTV(epi['link'])
+					else:backuplink = epi['link']
+				if link != '' and link['link'].startswith('http'):break
+			else:
+				if int(epi['ep']) == int(epinfo):
+					medialinks.append(epi['link'])
+					srcs = epi['link'].replace('http://','').replace('www.','').split('.')
+					src = '%s - %s'%(srcs[0],epi['sub'])
+					nguon.append(src)
+		if autopick:
+			if link == '' and backuplink != '':link = mediaget.getTV(backuplink)
+		else:
+			if len(nguon)>1:
+				ret = xbmcgui.Dialog().select(u'Chọn nguồn phim', nguon)
+				if ret>-1:link = mediaget.getTV(medialinks[ret])
+			else:link = mediaget.getTV(medialinks[0])
 		return link
 
 def mp4direct(path):
@@ -357,8 +381,8 @@ def addVideoSources():
 		content += "</sources>"
 		#file.close()
 	
-	soup = BeautifulSoup(content)
-	video = soup.find("video")
+	soup = BeautifulSoup(content)  
+	video = soup.find("video")      
 	
 	if len(soup.findAll(text="MoviesLib")) < 1:
 		movie_source_tag = Tag(soup, "source")
