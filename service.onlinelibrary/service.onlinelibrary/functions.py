@@ -77,21 +77,21 @@ def checkupdate(path,scan,write=True):
 			paths = path.split('/')
 			if paths[0] == 'tv':
 				list = open(os.path.join(datapath,'files','%s.txt' %paths[1]),'r').read()
-				utime = int(list[list.find(paths[2]+'|')+len(paths[2])+1:list.find(paths[2]+'|')+len(paths[2])+11])
+				utime = int(regsearch('^'+re.escape(paths[2])+'\|(\d+?)$',list,1,re.M))
 				listupdate = ''
 				try:
 					listupdate = open(os.path.join(datapath,'files','stat_%s.txt' %paths[1]),'r').read() 
 				except:pass
-				if listupdate.find(paths[2]+'|') > -1:
-					ltime = listupdate[listupdate.find(paths[2]+'|')+len(paths[2])+1:listupdate.find(paths[2]+'|')+len(paths[2])+11]
+				if re.search('^'+re.escape(paths[2])+'\|',listupdate,re.M) != None:
+					ltime = regsearch('^'+re.escape(paths[2])+'\|(\d+?)$',listupdate,1,re.M)
 				else:ltime = '0000000000'
 				if utime > int(ltime):
-					if listupdate == '' or listupdate.find(paths[2]+'|') < 0:
+					if listupdate == '' or re.search('^'+re.escape(paths[2])+'\|',listupdate,re.M) == None:
 						towrite = '%s%s|%s\n'%(listupdate,paths[2],str(utime))
 					else:
-						namestring = listupdate[listupdate.find(paths[2]+'|'):listupdate.find(paths[2]+'|')+len(paths[2])+11]
+						namestring = regsearch('^('+re.escape(paths[2])+'\|\d+?)$',listupdate,1,re.M)
 						new_namestr = namestring.replace(ltime,str(utime))
-						towrite = listupdate.replace(namestring,new_namestr)
+						towrite = re.sub('^'+re.escape(namestring)+'$',new_namestr,listupdate,flags=re.M)
 					with open(os.path.join(datapath,'files','stat_%s.txt' %paths[1]), "w") as code:code.write(towrite)
 				scanwrite = False
 			#if paths[0] == 'movie':
@@ -101,13 +101,13 @@ def checkupdate(path,scan,write=True):
 			paths = path.split('/')
 			if paths[0] == 'tv':
 				list = open(os.path.join(datapath,'files','%s.txt' %paths[1]),'r').read()
-				utime = int(list[list.find(paths[2]+'|')+len(paths[2])+1:list.find(paths[2]+'|')+len(paths[2])+11])
+				utime = int(regsearch('^'+re.escape(paths[2])+'\|(\d+?)$',list,1,re.M))
 				listupdate = ''
 				try:
 					listupdate = open(os.path.join(datapath,'files','stat_%s.txt' %paths[1]),'r').read() 
 				except:pass
-				if listupdate.find(paths[2]+'|') > -1:
-					ltime = listupdate[listupdate.find(paths[2]+'|')+len(paths[2])+1:listupdate.find(paths[2]+'|')+len(paths[2])+11]
+				if re.search('^'+re.escape(paths[2])+'\|',listupdate,re.M) != None:
+					ltime = regsearch('^'+re.escape(paths[2])+'\|(\d+?)$',listupdate,1,re.M)
 				else:ltime = '0000000000'
 				if utime > int(ltime):
 					scanwrite = True
